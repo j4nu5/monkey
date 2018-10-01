@@ -67,10 +67,11 @@ func (l *Lexer) NextToken() token.Token {
 		}
 	}
 
+	ch := l.ch
 	l.consumeNextChar()
 	return token.Token{
 		Type:    token.ILLEGAL,
-		Literal: "ILLEGAL",
+		Literal: string(ch),
 	}
 }
 
