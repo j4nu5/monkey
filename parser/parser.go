@@ -36,6 +36,7 @@ var precedences = map[token.Type]int{
 	token.MINUS:    SUM,
 	token.SLASH:    PRODUCT,
 	token.ASTERISK: PRODUCT,
+	token.LPAREN:   CALL,
 }
 
 // Parser parses Monkey.
@@ -83,6 +84,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerInfixParser(token.GT, p.parseInfixExpression)
 	p.registerInfixParser(token.EQ, p.parseInfixExpression)
 	p.registerInfixParser(token.NOTEQ, p.parseInfixExpression)
+	p.registerInfixParser(token.LPAREN, p.parseCallExpression)
 
 	return p
 }
@@ -208,6 +210,25 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expr
 }
 
+func (p *Parser) parseCallExpression(left ast.Expression) ast.Expression {
+	expr := &ast.CallExpression{
+		Token:    p.currentToken,
+		Function: left,
+	}
+	p.consumeToken(token.LPAREN)
+	expr.Arguments = []ast.Expression{}
+
+	for p.currentToken.Type != token.EOF && p.currentToken.Type != token.RPAREN {
+		expr.Arguments = append(expr.Arguments, p.parseExpression(LOWEST))
+		if p.currentToken.Type == token.COMMA {
+			p.consumeNextToken()
+		}
+	}
+	p.consumeToken(token.RPAREN)
+
+	return expr
+}
+
 func (p *Parser) parseIfExpression() ast.Expression {
 	expr := &ast.IfExpression{Token: p.currentToken}
 	p.consumeToken(token.IF)
@@ -248,7 +269,7 @@ func (p *Parser) parseFunctionExpression() ast.Expression {
 func (p *Parser) consumeToken(t token.Type) {
 	if p.currentToken.Type != t {
 		p.addError(
-			fmt.Sprintf("Could not properly consume token: %v expected: %v", p.currentToken, t))
+			fmt.Sprintf("Could not properly consume token: %s expected: %s", p.currentToken, t))
 	}
 	p.consumeNextToken()
 }
