@@ -14,10 +14,7 @@ type (
 	infixParseFn  func(ast.Expression) ast.Expression
 )
 
-var parselets = map[token.Type]parselet{
-	token.LET:    letStatementParselet,
-	token.RETURN: returnStatementParselet,
-}
+var parselets map[token.Type]parselet
 
 const (
 	_ int = iota
@@ -56,6 +53,12 @@ type Parser struct {
 
 // New creates and initializes a new Parser for Monkey.
 func New(l *lexer.Lexer) *Parser {
+	parselets = map[token.Type]parselet{
+		token.LET:    letStatementParselet,
+		token.RETURN: returnStatementParselet,
+		token.LBRACE: blockStatementParselet,
+	}
+
 	p := &Parser{l: l}
 	p.prefixParsers = make(map[token.Type]prefixParseFn)
 	p.infixParsers = make(map[token.Type]infixParseFn)
@@ -69,6 +72,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefixParser(token.BANG, p.parsePrefixOperator)
 	p.registerPrefixParser(token.MINUS, p.parsePrefixOperator)
 	p.registerPrefixParser(token.LPAREN, p.parseGroupedExpression)
+	p.registerPrefixParser(token.IF, p.parseIfExpression)
 
 	p.registerInfixParser(token.PLUS, p.parseInfixExpression)
 	p.registerInfixParser(token.MINUS, p.parseInfixExpression)
@@ -203,6 +207,24 @@ func (p *Parser) parseInfixExpression(left ast.Expression) ast.Expression {
 	return expr
 }
 
+func (p *Parser) parseIfExpression() ast.Expression {
+	expr := &ast.IfExpression{Token: p.currentToken}
+	p.consumeToken(token.IF)
+	p.consumeToken(token.LPAREN)
+	expr.Condition = p.parseExpression(LOWEST)
+	p.consumeToken(token.RPAREN)
+
+	expr.Consequence = blockStatementParselet(p).(*ast.BlockStatement)
+	if p.currentToken.Type != token.ELSE {
+		return expr
+	}
+
+	p.consumeToken(token.ELSE)
+	expr.Alternative = blockStatementParselet(p).(*ast.BlockStatement)
+
+	return expr
+}
+
 func (p *Parser) consumeToken(t token.Type) {
 	if p.currentToken.Type != t {
 		p.addError(
@@ -262,6 +284,22 @@ func expressionStatementParselet(p *Parser) ast.Statement {
 	if p.currentToken.Type == token.SEMICOLON {
 		p.consumeToken(token.SEMICOLON)
 	}
+
+	return stmt
+}
+
+func blockStatementParselet(p *Parser) ast.Statement {
+	if p.currentToken.Type != token.LBRACE {
+		return nil
+	}
+
+	stmt := &ast.BlockStatement{Token: p.currentToken}
+	stmt.Statements = []ast.Statement{}
+	p.consumeToken(token.LBRACE)
+	for p.currentToken.Type != token.EOF && p.currentToken.Type != token.RBRACE {
+		stmt.Statements = append(stmt.Statements, p.parseStatement())
+	}
+	p.consumeToken(token.RBRACE)
 
 	return stmt
 }
