@@ -73,6 +73,7 @@ func New(l *lexer.Lexer) *Parser {
 	p.registerPrefixParser(token.MINUS, p.parsePrefixOperator)
 	p.registerPrefixParser(token.LPAREN, p.parseGroupedExpression)
 	p.registerPrefixParser(token.IF, p.parseIfExpression)
+	p.registerPrefixParser(token.FUNCTION, p.parseFunctionExpression)
 
 	p.registerInfixParser(token.PLUS, p.parseInfixExpression)
 	p.registerInfixParser(token.MINUS, p.parseInfixExpression)
@@ -221,6 +222,25 @@ func (p *Parser) parseIfExpression() ast.Expression {
 
 	p.consumeToken(token.ELSE)
 	expr.Alternative = blockStatementParselet(p).(*ast.BlockStatement)
+
+	return expr
+}
+
+func (p *Parser) parseFunctionExpression() ast.Expression {
+	expr := &ast.FunctionLiteral{Token: p.currentToken}
+	expr.Parameters = []*ast.Identifier{}
+
+	p.consumeToken(token.FUNCTION)
+	p.consumeToken(token.LPAREN)
+	for p.currentToken.Type != token.EOF && p.currentToken.Type != token.RPAREN {
+		expr.Parameters = append(expr.Parameters, p.parseIdentifier().(*ast.Identifier))
+		if p.currentToken.Type == token.COMMA {
+			p.consumeToken(token.COMMA)
+		}
+	}
+	p.consumeToken(token.RPAREN)
+
+	expr.Body = blockStatementParselet(p).(*ast.BlockStatement)
 
 	return expr
 }
