@@ -8,27 +8,39 @@ type Token struct {
 }
 
 const (
-	ILLEGAL = "ILLEGAL"
-	EOF = "EOF"
+	ILLEGAL TokenType = "ILLEGAL"
+	EOF     TokenType = "EOF"
 
 	// Identifiers and literals.
-	IDENT = "IDENT"
-	INT = "INT"
+	IDENT TokenType = "IDENT"
+	INT   TokenType = "INT"
 
 	// Operators.
-	ASSIGN = "="
-	PLUS = "+"
+	ASSIGN TokenType = "="
+	PLUS   TokenType = "+"
 
 	// Delimiters.
-	COMMA = ","
-	SEMICOLON = ";"
+	COMMA     TokenType = ","
+	SEMICOLON TokenType = ";"
 
-	LPAREN = "("
-	RPAREN = ")"
-	LBRACE = "{"
-	RBRACE = "}"
+	LPAREN TokenType = "("
+	RPAREN TokenType = ")"
+	LBRACE TokenType = "{"
+	RBRACE TokenType = "}"
 
 	// Keywords.
-	FUNCTION = "FUNCTION"
-	LET = "LET"
+	FUNCTION TokenType = "FUNCTION"
+	LET      TokenType = "LET"
 )
+
+var keywords = map[string]TokenType{
+	"fn":  FUNCTION,
+	"let": LET,
+}
+
+func LookupIdent(ident string) TokenType {
+	if tok, ok := keywords[ident]; ok {
+		return tok
+	}
+	return IDENT
+}
